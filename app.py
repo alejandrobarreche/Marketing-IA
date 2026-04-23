@@ -166,7 +166,7 @@ details { border: 1px solid rgba(200,169,110,0.12) !important; border-radius: 2p
 """, unsafe_allow_html=True)
 
 # ─── CARGA DE DATOS ──────────────────────────────────────────────────────────
-DATA_DIR = Path("data/warehouse/version211")
+DATA_DIR = Path("data/warehouse/version1")
 
 @st.cache_data
 def load_data():
