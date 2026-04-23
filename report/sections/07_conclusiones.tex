@@ -1,0 +1,57 @@
+\section{Conclusiones y recomendaciones}
+
+\begin{execbox}
+Hay un claro ganador (\textbf{Propios y Exterior}, ROI 25.7$\times$) y un claro saturado (\textbf{Performance}, ROI 6.0$\times$). La recomendación operativa es implementar la reasignación \textsc{Do Something} — transferir el 30\% del presupuesto de Performance a Propios y Exterior — en el próximo ejercicio.
+\end{execbox}
+
+\subsection{Respuestas a las preguntas de negocio}
+
+\subsubsection*{¿Qué \% de las ventas viene del marketing?}
+
+Según el modelo, el marketing explica el \textbf{91.8\%} de las 758.1\,M€ vendidas entre 2020 y 2024 — pero esta cifra debe leerse como un \textit{contrafactual} (``qué pasaría si apagáramos todos los canales''), no como una atribución literal. Parte de lo que el modelo atribuye a medios es, casi con seguridad, memoria de marca acumulada antes de 2020 que no aparece en los datos. En términos \textit{relativos} entre grupos el orden sí es interpretable y robusto.
+
+\subsubsection*{¿Dónde conviene invertir el próximo euro?}
+
+En \textbf{Propios y Exterior} (email CRM + exterior). Hoy es el grupo con mayor ROI (25.7$\times$) y el que menos presupuesto absoluto recibe (10.0\,M€ sobre 58.9\,M€ totales). Las curvas de respuesta confirman que sigue en zona de crecimiento. En paralelo, \textbf{Performance} (paid search + social paid) es el grupo saturado: recibe 23.5\,M€ (el 40\% del presupuesto) para generar el ROI más bajo (6.0$\times$).
+
+\subsubsection*{¿Cuánto me fío del modelo?}
+
+\begin{itemize}[leftmargin=*, itemsep=1pt]
+    \item $R^2$ test = 0.65 y MAPE test = 12.2\% — en rango sano para un MMM.
+    \item Test placebo con $\Delta R^2$ = +0.535 $\rightarrow$ la señal de medios es necesaria, no es ruido.
+    \item IC 95\% \textit{bootstrap} de los cuatro grupos de marketing no cruzan cero.
+    \item Tornado de sensibilidad: errores del $\pm 20\%$ en $\beta$ no invierten la ordenación de ROIs.
+\end{itemize}
+
+\subsection{Recomendaciones accionables}
+
+\begin{enumerate}[leftmargin=*, itemsep=4pt]
+    \item \textbf{Aprobar \textsc{Do Something}} para el próximo ejercicio: transferir el 30\% del presupuesto de Performance a Propios y Exterior, sin aumentar el gasto total. Los detalles numéricos del \textit{lift} proyectado se pueden consultar en vivo en el dashboard (pestaña \textit{Laboratorio de Inversión}).
+    \item \textbf{No ejecutar \textsc{Do the Most}} sin pilotar antes. Reasignar el 60\% concentra demasiado riesgo en Propios y Exterior; el incremento marginal sobre \textsc{Do Something} no justifica la exposición.
+    \item \textbf{Pilotar reducciones adicionales de Performance} en semanas valle. La curva de respuesta muestra que el grupo está saturado: apagar una semana de paid search rara vez mueve la aguja.
+    \item \textbf{Invertir en capacidad de medición de Propios y Exterior}. Si el grupo va a recibir más presupuesto, el CMO necesita métricas propias (listas CRM segmentadas, paneles de exposición exterior) que permitan validar el \textit{lift} real, no solo el estimado.
+    \item \textbf{Monitorizar trimestralmente} la desviación real vs. proyectada. Si el \textit{lift} se materializa, extender la reasignación un $5$--$10\%$ más; si no, reentrenar el modelo con los nuevos datos.
+    \item \textbf{Mantener el dashboard vivo.} Que el comité siga usando el simulador antes de cada decisión presupuestaria importante --- el valor del proyecto está en la capacidad de \textit{explorar}, no solo en esta recomendación puntual.
+\end{enumerate}
+
+\subsection{Limitaciones y siguientes pasos}
+
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+    \item \textbf{Atribución inflada por inercia de marca.} El 91.8\% atribuido a medios captura también la memoria anterior a 2020. Un MMM bayesiano con prior sobre la base orgánica corregiría este efecto.
+    \item \textbf{Horizonte corto:} 258 semanas es suficiente para detectar estacionalidad y tendencia, pero limita la identificación de $\alpha$ por grupo (de ahí que los fijemos con priors).
+    \item \textbf{Granularidad nacional:} se pierde el detalle ciudad a ciudad. Un modelo jerárquico con efectos por ciudad es el siguiente paso natural si se quiere optimizar el mix local.
+    \item \textbf{Efectos cruzados:} el modelo asume independencia entre grupos tras el adstock. Un modelo con interacciones explícitas (p.\,ej., \textit{Offline Medios} $\times$ \textit{Performance}) podría capturar sinergias, a coste de más parámetros y menos interpretabilidad.
+    \item \textbf{Validación causal:} el siguiente paso ideal es complementar el MMM con experimentos controlados (\textit{geo lift} o \textit{conversion lift} \textit{studies}) que confirmen causalmente las atribuciones estimadas — especialmente en Propios y Exterior antes de aumentar significativamente su peso.
+\end{itemize}
+
+\subsection{Cierre}
+
+\begin{takeaway}
+Este informe presenta un \textbf{Marketing Mix Model completo y defendible} para K-Moda, construido a partir de 258 semanas de datos históricos y expuesto a través de un dashboard que permite al comité tomar decisiones de reasignación con evidencia. El modelo no es perfecto --- ningún MMM lo es --- pero es útil, transparente y reproducible. Y la recomendación operativa es clara: \textit{reasignar antes de aumentar, y empezar por mover dinero de Performance a Propios y Exterior}.
+\end{takeaway}
+
+\vspace{1cm}
+\begin{flushright}
+\textit{Alejandro Barreche Ruiz}\\
+\textit{UAX · Inteligencia Artificial · Prof. Jacinto}
+\end{flushright}

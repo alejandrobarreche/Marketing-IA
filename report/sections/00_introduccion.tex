@@ -1,0 +1,52 @@
+\section{Introducción}
+
+K-Moda es una cadena nacional de moda con presencia en diez ciudades, dos canales de venta (tienda y online) y una inversión publicitaria repartida entre ocho medios distintos. La pregunta que mueve este proyecto es sencilla, aunque la respuesta no lo sea:
+
+\begin{quote}
+\color{kmcharcoal}\itshape
+``De cada euro que vendemos, ¿cuánto se debe al marketing? Y si queremos vender más el año que viene, ¿dónde conviene invertir ese presupuesto?''
+\end{quote}
+
+\subsection{Objetivo}
+
+Construir un \textbf{Marketing Mix Model} (MMM) que responda dos preguntas:
+
+\begin{enumerate}[leftmargin=*, itemsep=2pt]
+    \item \textbf{Atribución}: qué porcentaje de las ventas semanales se explica por la inversión publicitaria, y cuánto proviene de la marca, la recurrencia y el SEO (lo que llamamos \textit{base orgánica}).
+    \item \textbf{Simulación}: dado un presupuesto anual, ¿qué combinación entre canales maximiza las ventas, y con qué nivel de riesgo?
+\end{enumerate}
+
+El entregable final es doble: (i) un modelo estadístico reproducible, y (ii) un panel interactivo (\textit{dashboard}) que permite al equipo directivo explorar escenarios sin conocer el código.
+
+\subsection{Resumen ejecutivo}
+
+\begin{execbox}
+\begin{itemize}[leftmargin=*, itemsep=3pt, topsep=2pt]
+    \item Sobre 258 semanas (2020--2024) y 758.1\,M€ de ventas acumuladas, el modelo atribuye al marketing el \textbf{91.8\%} del total predicho. Este número es una \textit{cifra-modelo} obtenida del contrafactual ``apagar todos los canales desde 2020'' — se discute honestamente en la sección de evaluación.
+    \item Cuatro grupos de canales: \textbf{Performance}, \textbf{Branding Digital}, \textbf{Offline Medios} y \textbf{Propios y Exterior}. El orden por ROI es claro: \textbf{Propios y Exterior 25.7$\times$}, Offline Medios 15.3$\times$, Branding Digital 8.5$\times$, Performance 6.0$\times$.
+    \item El modelo generaliza bien fuera de muestra: \textbf{$R^2_{\text{test}}$ = 0.65}, \textbf{MAPE test = 12.2\%}, dentro del rango sano para un MMM (8--20\%). El test placebo añade un $\Delta R^2$ = +0.535 sobre el modelo con ruido $\rightarrow$ señal real.
+    \item Una reasignación del \textbf{30\% del presupuesto de Performance a Propios y Exterior} (\textsc{Do Something}) proyecta \textit{lift} positivo sin aumentar el gasto total. Es la recomendación operativa.
+\end{itemize}
+\end{execbox}
+
+\subsection{Metodología en una página}
+
+El pipeline se divide en cinco bloques, cada uno documentado en su propia sección:
+
+\begin{center}
+\begin{tabular}{@{}p{3.2cm} p{11cm}@{}}
+\toprule
+\textbf{Etapa} & \textbf{Qué hace} \\
+\midrule
+\textcolor{kmgolddark}{\textbf{1. ETL}} & Une las siete tablas de origen (ventas, pedidos, inversión, calendario, tráfico, clientes, productos) en una única tabla semanal nacional. \\
+\textcolor{kmgolddark}{\textbf{2. Data understanding}} & Explora estacionalidad, correlaciones, huecos y calidad de la señal antes de modelar. \\
+\textcolor{kmgolddark}{\textbf{3. Data preparation}} & Agrupa los 8 canales en 4 grupos según mecánica de respuesta, aplica \textit{adstock} con $\alpha$ diferenciado y saturación logarítmica. \\
+\textcolor{kmgolddark}{\textbf{4. Modeling}} & Ajusta una regresión ElasticNet con restricción de coeficientes positivos, valida con \textit{hold-out} estratificado y cuantifica incertidumbre con \textit{bootstrap} por bloques. \\
+\textcolor{kmgolddark}{\textbf{5. Evaluation}} & Descompone ventas en base vs. marketing, simula escenarios y construye el dashboard ejecutivo. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{A quién va dirigido este informe}
+
+Este documento está escrito para un lector directivo: \textbf{no se presupone background estadístico}. Cada decisión técnica se justifica en términos de negocio, y las fórmulas se limitan a lo imprescindible. Las secciones más técnicas (\textit{Data Preparation} y \textit{Modeling}) incluyen cajas de \textit{``Decisión técnica''} que pueden saltarse sin perder el hilo.

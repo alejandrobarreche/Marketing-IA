@@ -1,0 +1,68 @@
+\section{Dashboard · El modelo en manos del comité}
+
+\begin{takeaway}
+El modelo se expone a través de un \textbf{panel interactivo} (Streamlit) estructurado en cuatro pestañas, con cuatro visualizaciones animadas diseñadas para que un directivo entienda el MMM sin necesidad de ver código. El objetivo no es \textit{wow-factor}: es que la persona que decide el presupuesto pueda \textbf{explorar} escenarios por sí misma.
+\end{takeaway}
+
+\subsection{Filosofía de diseño}
+
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+    \item \textbf{Narrativa, no dashboard frío.} Cada pestaña cuenta una parte de la historia. No es una colección de gráficos: es un recorrido.
+    \item \textbf{Paleta sobria.} Fondo oscuro, acento dorado, tipografía \textit{Playfair Display} (titulares) + \textit{Inter} (texto) — lenguaje visual de lujo acorde con K-Moda.
+    \item \textbf{Interactividad con propósito.} Cada animación responde a una pregunta concreta de negocio, no decora.
+    \item \textbf{Feedback claro al usuario.} Los botones \textit{play} están resaltados con badge pulsante dorado para que no pasen inadvertidos entre tanta información.
+\end{itemize}
+
+\subsection{Estructura en cuatro pestañas}
+
+\begin{center}
+\begin{tabular}{@{}p{3.8cm} p{10.5cm}@{}}
+\toprule
+\textbf{Pestaña} & \textbf{Qué responde} \\
+\midrule
+\textcolor{kmgolddark}{\textbf{1 · Visión General}} & ¿Cómo han evolucionado las ventas? ¿Qué fracción viene del marketing? Incluye el \textit{hero} con capa base + capa marketing apiladas, y la \textbf{Hélice de Ventas} en 3D. \\
+\textcolor{kmgolddark}{\textbf{2 · Canales y Atribución}} & ¿Qué canal es más eficiente? ¿Qué aporta cada uno? Cascada de atribución, áreas semanales, evolución anual y tabla con IC. \\
+\textcolor{kmgolddark}{\textbf{3 · Laboratorio de Inversión}} & ¿Y si movemos presupuesto? Incluye mapa 2D de 350 escenarios, curvas de retorno, \textbf{Colina de Respuesta 3D}, \textbf{Lluvia de Escenarios 3D}, tornado, escenarios predefinidos y simulador interactivo. \\
+\textcolor{kmgolddark}{\textbf{4 · El Modelo}} & ¿Cuánto me fío? Real vs. predicción, residuos, coeficientes y simulador de \textit{adstock} con \textbf{Osciloscopio} animado. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Visualizaciones animadas · El diferencial}
+
+Cuatro visualizaciones específicamente diseñadas para \textit{contar} el modelo, no solo mostrarlo:
+
+\subsubsection{Hélice de Ventas 3D}
+
+Cilindro tridimensional donde la base representa el calendario anual (12 meses en círculo), la altura es el tiempo cronológico (2020$\rightarrow$2024), y el radio se despega de la base proporcionalmente a las ventas semanales. Al pulsar \textit{play}, la hélice se dibuja semana a semana, mostrando el crecimiento estructural (la hélice se ensancha cada año) y el ruido estacional (ondulaciones dentro de cada vuelta). \textit{Pedagógica}: visualiza la estacionalidad y el crecimiento a la vez.
+
+\subsubsection{Colina de Respuesta 3D}
+
+Superficie 3D donde los ejes $X$ e $Y$ son la inversión semanal en los dos grupos más contributivos del modelo (\textit{Propios y Exterior} y \textit{Offline Medios}), y $Z$ son las ventas anuales proyectadas. La colina se aplana donde los canales saturan. Un punto animado ejecuta \textit{gradient ascent} desde el mix histórico hasta el óptimo, mostrando físicamente cómo el modelo \textit{sube la colina}. \textit{Resuelve el problema}: hace tangible el concepto de rendimientos decrecientes.
+
+\subsubsection{Lluvia de Escenarios 3D}
+
+Nube de 220 escenarios distintos donde $X$ = concentración del mix (\textit{Herfindahl}), $Y$ = $\Delta$Ventas vs. baseline, $Z$ = riesgo (desviación bootstrap), color = ROI marginal. Los escenarios caen ordenados por $\Delta$Ventas ascendente — los mejores aterrizan al final. \textit{Lectura directiva}: el óptimo no es el punto más alto en $Y$, es el que maximiza $Y$ con el menor $Z$ posible; invita a pensar en la frontera riesgo-upside.
+
+\subsubsection{Osciloscopio de Adstock}
+
+Vista doble: arriba, impulsos de inversión en semanas concretas (campañas); abajo, la onda dorada de memoria adstock que resulta de convolver esos impulsos con el decaimiento $\alpha$. Un barrido tipo CRT recorre la línea temporal mostrando cómo cada campaña deja estela y cómo campañas encadenadas construyen memoria de marca. \textit{Pedagógica}: traduce la fórmula del \textit{adstock} en intuición visual inmediata.
+
+\subsection{Simulador interactivo}
+
+Además de los escenarios predefinidos, el dashboard incluye un \textbf{simulador abierto} donde el usuario ajusta la inversión semanal en cada canal mediante sliders y ve en tiempo real:
+
+\begin{itemize}[leftmargin=*, itemsep=1pt]
+    \item ventas anuales proyectadas,
+    \item \textit{lift} vs. baseline,
+    \item ROI resultante,
+    \item intervalo de confianza (bootstrap) del resultado.
+\end{itemize}
+
+Esto convierte el informe estático en una herramienta de decisión \textit{viva}: cualquier propuesta de reasignación se puede probar antes de ejecutar.
+
+\subsection{Despliegue técnico}
+
+\begin{decisionbox}
+\textbf{Stack:} Streamlit (framework web) + Plotly (gráficos) + scikit-learn (modelo). El dashboard carga los artefactos producidos por el pipeline (\texttt{elastic\_net.pkl}, \texttt{adstock\_params.pkl}, \texttt{scalers.pkl}) y reconstruye la simulación desde ellos. Cualquier mejora del modelo se refleja en el dashboard sin tocar la capa de presentación.
+\end{decisionbox}
