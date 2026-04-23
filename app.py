@@ -120,6 +120,20 @@ section[data-testid="stSidebar"] {
     color: #C8A96E; border-bottom: 1px solid rgba(200,169,110,0.12);
     padding-bottom: 10px; margin: 40px 0 24px;
 }
+@keyframes pulseBadge {
+    0%   { box-shadow: 0 0 0 0 rgba(200,169,110,0.55); transform: translateY(-1px) scale(1); }
+    70%  { box-shadow: 0 0 0 10px rgba(200,169,110,0);   transform: translateY(-1px) scale(1.04); }
+    100% { box-shadow: 0 0 0 0 rgba(200,169,110,0);      transform: translateY(-1px) scale(1); }
+}
+.play-badge {
+    display: inline-block; margin-left: 14px;
+    padding: 3px 10px; border-radius: 12px;
+    background: linear-gradient(90deg, #C8A96E 0%, #8B6914 100%);
+    color: #0a0907 !important;
+    font-size: 9px; font-weight: 800; letter-spacing: 1.8px;
+    animation: pulseBadge 1.8s infinite;
+    vertical-align: middle;
+}
 .scenario-card {
     background: linear-gradient(145deg, rgba(25,25,20,0.9) 0%, rgba(15,15,10,0.95) 100%);
     border: 1px solid rgba(200,169,110,0.12); border-radius: 2px;
@@ -357,6 +371,42 @@ def kpi_card(label, value, sub=""):
 def caption(text):
     return f'<p class="chart-caption">{text}</p>'
 
+def animated_header(title, label="▶ INTERACTIVO · pulsa Play"):
+    return (f'<p class="section-header">{title}'
+            f'<span class="play-badge">{label}</span></p>')
+
+def play_button(play_label="▶ Play", stop_label="■ Stop", duration=80, **pos):
+    """Botón Play/Stop destacado (fondo dorado). pos override: x, y, xanchor, yanchor."""
+    defaults = dict(x=0.02, y=0.02, xanchor="left", yanchor="bottom")
+    defaults.update(pos)
+    return dict(
+        type="buttons", showactive=False, direction="left",
+        pad=dict(r=6, t=6, b=6, l=6),
+        bgcolor=KM_GOLD, bordercolor=KM_CREAM, borderwidth=2,
+        font=dict(color="#0a0907", size=13, family="Inter"),
+        buttons=[
+            dict(label=f"  {play_label}  ", method="animate",
+                 args=[None, dict(frame=dict(duration=duration, redraw=True),
+                                  fromcurrent=True, transition=dict(duration=0))]),
+            dict(label=f"  {stop_label}  ", method="animate",
+                 args=[[None], dict(frame=dict(duration=0, redraw=False),
+                                    mode="immediate", transition=dict(duration=0))]),
+        ],
+        **defaults,
+    )
+
+def play_hint_annotation(text="⚡ Pulsa ▶ Play para animar", **pos):
+    defaults = dict(x=0.5, y=1.08, xref="paper", yref="paper",
+                    xanchor="center", yanchor="bottom")
+    defaults.update(pos)
+    return dict(
+        text=f"<b>{text}</b>", showarrow=False,
+        font=dict(color=KM_GOLD, size=12),
+        bgcolor="rgba(200,169,110,0.08)",
+        bordercolor=KM_GOLD, borderwidth=1, borderpad=6,
+        **defaults,
+    )
+
 # ─── BRAND BAR ───────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="brand-bar">
@@ -449,6 +499,133 @@ with tab1:
         f"se explica por inversión publicitaria. El resto ({base_total/ventas_totales*100:.0f}%) "
         f"es base orgánica: SEO, recurrencia y fuerza de marca. "
         f"Sobre 2020-2024 el marketing explica el <b>{pct_mkt:.0f}%</b> de las ventas con mROI <b>{mroi_global:.1f}x</b>."
+    ), unsafe_allow_html=True)
+
+    # ── Hélice cilíndrica: base = año (12 meses), altura = tiempo, deformación radial = ventas ──
+    st.markdown(animated_header("Hélice de Ventas · 2020–2024"), unsafe_allow_html=True)
+
+    dates_cyl = pd.to_datetime(etl["semana_inicio"]).reset_index(drop=True)
+    ventas_cyl = np.asarray(etl["venta_neta_total_eur"].values, dtype=float)
+    n_w = len(dates_cyl)
+
+    iso = dates_cyl.dt.isocalendar()
+    week_of_year = iso["week"].to_numpy().astype(float)
+    year_arr = iso["year"].to_numpy()
+    years_sorted = np.sort(np.unique(year_arr))
+    year_idx = np.searchsorted(years_sorted, year_arr).astype(float)
+
+    theta = 2 * np.pi * (week_of_year - 1) / 52.0
+    z_line = year_idx + (week_of_year - 1) / 52.0
+
+    v_min, v_max = float(ventas_cyl.min()), float(ventas_cyl.max())
+    v_norm = (ventas_cyl - v_min) / (v_max - v_min + 1e-9)
+    R_BASE, R_AMP = 0.6, 0.95
+    r_line = R_BASE + R_AMP * v_norm
+
+    x_line = r_line * np.cos(theta)
+    y_line = r_line * np.sin(theta)
+
+    # Cilindro de referencia (wireframe)
+    n_rings = len(years_sorted) + 1
+    theta_ring = np.linspace(0, 2 * np.pi, 80)
+    ring_x = R_BASE * np.cos(theta_ring)
+    ring_y = R_BASE * np.sin(theta_ring)
+
+    fig_cyl = go.Figure()
+    for k in range(n_rings):
+        fig_cyl.add_trace(go.Scatter3d(
+            x=ring_x, y=ring_y, z=np.full_like(ring_x, float(k)),
+            mode="lines",
+            line=dict(color="rgba(200,169,110,0.18)", width=1),
+            hoverinfo="skip", showlegend=False,
+        ))
+    # Rayos verticales marcando meses
+    for m in range(12):
+        ang = 2 * np.pi * m / 12
+        fig_cyl.add_trace(go.Scatter3d(
+            x=[R_BASE * np.cos(ang)] * 2,
+            y=[R_BASE * np.sin(ang)] * 2,
+            z=[0, float(n_rings - 1)],
+            mode="lines",
+            line=dict(color="rgba(200,169,110,0.10)", width=1),
+            hoverinfo="skip", showlegend=False,
+        ))
+    # Etiquetas de meses
+    meses_lbl = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
+    fig_cyl.add_trace(go.Scatter3d(
+        x=[(R_BASE + R_AMP + 0.15) * np.cos(2*np.pi*m/12) for m in range(12)],
+        y=[(R_BASE + R_AMP + 0.15) * np.sin(2*np.pi*m/12) for m in range(12)],
+        z=[float(n_rings - 1) + 0.15] * 12,
+        mode="text", text=meses_lbl,
+        textfont=dict(color=KM_GRAY, size=10),
+        hoverinfo="skip", showlegend=False,
+    ))
+    # Etiquetas de años
+    fig_cyl.add_trace(go.Scatter3d(
+        x=[R_BASE + R_AMP + 0.3] * len(years_sorted),
+        y=[0.0] * len(years_sorted),
+        z=[float(k) for k in range(len(years_sorted))],
+        mode="text", text=[str(y) for y in years_sorted],
+        textfont=dict(color=KM_GOLD, size=11),
+        hoverinfo="skip", showlegend=False,
+    ))
+
+    # Traza principal (estado final: la espiral completa)
+    hover_txt = [
+        f"{d.strftime('%Y-%m-%d')}<br>€{v/1e6:.2f}M"
+        for d, v in zip(dates_cyl, ventas_cyl)
+    ]
+    trace_main_idx = n_rings + 12 + 2  # rings + radios mensuales + labels meses + labels años
+    fig_cyl.add_trace(go.Scatter3d(
+        x=x_line, y=y_line, z=z_line,
+        mode="lines",
+        line=dict(
+            color=ventas_cyl / 1e6, colorscale=[[0, KM_GOLD_DARK], [1, KM_GOLD]],
+            width=5, showscale=False,
+        ),
+        text=hover_txt, hoverinfo="text",
+        name="Ventas semanales",
+    ))
+
+    # Frames para animación (crecimiento semana a semana, una por frame)
+    frames = []
+    for end in range(2, n_w + 1):
+        frames.append(go.Frame(
+            data=[go.Scatter3d(
+                x=x_line[:end], y=y_line[:end], z=z_line[:end],
+                mode="lines",
+                line=dict(
+                    color=ventas_cyl[:end] / 1e6,
+                    colorscale=[[0, KM_GOLD_DARK], [1, KM_GOLD]],
+                    cmin=v_min/1e6, cmax=v_max/1e6,
+                    width=5,
+                ),
+            )],
+            traces=[trace_main_idx],
+            name=str(end),
+        ))
+    fig_cyl.frames = frames
+
+    fig_cyl.update_layout(
+        title=dict(text="Cilindro = calendario anual · hélice = ventas semanales (deformación radial)",
+                   font=dict(color=KM_CREAM, size=13), x=0.02),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        height=560, margin=dict(l=0, r=0, t=50, b=20),
+        scene=dict(
+            xaxis=dict(visible=False), yaxis=dict(visible=False),
+            zaxis=dict(visible=False),
+            bgcolor="rgba(0,0,0,0)",
+            aspectmode="manual", aspectratio=dict(x=1, y=1, z=2.0),
+            camera=dict(eye=dict(x=2.2, y=2.2, z=0.35)),
+        ),
+        updatemenus=[play_button(duration=35, x=0.02, y=0.02)],
+        annotations=[play_hint_annotation()],
+    )
+    st.plotly_chart(fig_cyl, width="stretch")
+    st.markdown(caption(
+        f"Cada vuelta del cilindro es un año (Ene→Dic). La altura es tiempo cronológico, "
+        f"y el radio se despega de la base proporcionalmente a las ventas semanales. "
+        f"Pulsa <b>Play</b> para ver cómo se traza la hélice semana a semana."
     ), unsafe_allow_html=True)
 
     # ── Mini tarjetas por canal ──
@@ -798,6 +975,138 @@ with tab3:
         f"({r_opt_l['lift_pct']:+.1f}% ventas, sin aumentar presupuesto)."
     ), unsafe_allow_html=True)
 
+    # ── Lluvia de escenarios: Riesgo vs. Upside vs. Concentración ──
+    st.markdown(animated_header("Lluvia de Escenarios · Riesgo, Upside y Concentración",
+                                label="▶ INTERACTIVO · pulsa Llover"), unsafe_allow_html=True)
+
+    @st.cache_data
+    def _compute_risk_cloud(n=220, seed=7):
+        rng = np.random.default_rng(seed)
+        n_ch = len(inv_group_cols)
+        base_wk = sum(inv_hist_media.values())
+        r_base = simular(inv_hist_media)["ventas_anual_eur"]
+        # Factores de presupuesto (½× a 2×) × Dirichlet desbalanceado para cubrir concentración
+        factors = rng.uniform(0.5, 2.0, n)
+        allocs = rng.dirichlet(np.ones(n_ch) * 0.6, n)
+        boot_np = np.asarray(boot_coefs)  # (B, n_feat)
+        rows = []
+        for bf, alloc in zip(factors, allocs):
+            inv = {g: base_wk * bf * a for g, a in zip(inv_group_cols, alloc)}
+            X_sim = _build_X_sim(inv)
+            ventas_point = float(model.predict(X_sim).sum())
+            ventas_boot = np.maximum(model.intercept_ + X_sim @ boot_np.T, 0).sum(axis=0)
+            inv_anual = sum(inv.values()) * 52
+            hhi = float(np.sum(alloc ** 2))  # Herfindahl 0.25 (uniforme) → 1.0 (mono-canal)
+            dom = GROUP_LABELS.get(inv_group_cols[int(np.argmax(alloc))].replace("inv_", ""), "")
+            rows.append({
+                "hhi":       hhi,
+                "d_ventas":  (ventas_point - r_base) / 1e6,     # M€
+                "riesgo":    float(ventas_boot.std()) / 1e6,    # M€ (std bootstrap)
+                "roi":       (ventas_point - r_base) / inv_anual if inv_anual > 0 else 0,
+                "ventas":    ventas_point / 1e6,
+                "inv_anual": inv_anual / 1e6,
+                "canal_dom": dom,
+            })
+        df_ = pd.DataFrame(rows)
+        # Orden de "lluvia": peores primero, mejores al final (suspense)
+        df_ = df_.sort_values("d_ventas").reset_index(drop=True)
+        return df_, r_base
+
+    risk_df, r_base_rc = _compute_risk_cloud()
+    hhi_base = float(np.sum(np.array([inv_hist_media[g] for g in inv_group_cols]) /
+                            sum(inv_hist_media.values())) ** 2 * 0)  # placeholder
+    _alloc_base = np.array([inv_hist_media[g] for g in inv_group_cols])
+    _alloc_base = _alloc_base / _alloc_base.sum()
+    hhi_base = float(np.sum(_alloc_base ** 2))
+    # Riesgo del baseline
+    _X_base = _build_X_sim(inv_hist_media)
+    _boot_np = np.asarray(boot_coefs)
+    _vb_base = np.maximum(model.intercept_ + _X_base @ _boot_np.T, 0).sum(axis=0)
+    riesgo_base = float(_vb_base.std()) / 1e6
+
+    fig_rain = go.Figure()
+    # Punto baseline (referencia fija)
+    fig_rain.add_trace(go.Scatter3d(
+        x=[hhi_base], y=[0.0], z=[riesgo_base],
+        mode="markers+text", text=["baseline"], textposition="top center",
+        textfont=dict(color=KM_CREAM, size=11),
+        marker=dict(size=9, color=KM_CREAM, symbol="diamond", line=dict(color=KM_GOLD, width=1.5)),
+        showlegend=False,
+        hovertemplate=f"<b>Baseline</b><br>HHI: %{{x:.2f}}<br>ΔVentas: 0<br>Riesgo σ: €%{{z:.2f}}M<extra></extra>",
+    ))
+    # Traza-lluvia (se irá revelando en frames). Empieza con un punto invisible.
+    trace_rain_idx = 1
+    fig_rain.add_trace(go.Scatter3d(
+        x=[risk_df["hhi"].iloc[0]], y=[risk_df["d_ventas"].iloc[0]], z=[risk_df["riesgo"].iloc[0]],
+        mode="markers",
+        marker=dict(
+            size=6, color=[risk_df["roi"].iloc[0]],
+            colorscale=[[0, "#3a2510"], [0.5, KM_GOLD_DARK], [1, KM_GOLD]],
+            cmin=float(risk_df["roi"].min()), cmax=float(risk_df["roi"].max()),
+            opacity=0.85, line=dict(width=0),
+            colorbar=dict(title=dict(text="mROI", font=dict(color=KM_GRAY, size=10)),
+                          thickness=10, len=0.5, x=1.02, tickfont=dict(color=KM_GRAY, size=9)),
+        ),
+        customdata=np.stack([risk_df["canal_dom"].iloc[:1], risk_df["ventas"].iloc[:1]], axis=-1),
+        hovertemplate=("HHI: %{x:.2f}<br>ΔVentas: €%{y:+.2f}M<br>Riesgo σ: €%{z:.2f}M"
+                       "<br>Canal dom: %{customdata[0]}<br>Ventas: €%{customdata[1]:.1f}M<extra></extra>"),
+        showlegend=False,
+    ))
+
+    # Frames: van cayendo los escenarios en lotes (más fluido que 1 a 1)
+    BATCH = 4
+    frames_rain = []
+    for end in range(BATCH, len(risk_df) + 1, BATCH):
+        sub = risk_df.iloc[:end]
+        frames_rain.append(go.Frame(
+            data=[go.Scatter3d(
+                x=sub["hhi"], y=sub["d_ventas"], z=sub["riesgo"],
+                mode="markers",
+                marker=dict(
+                    size=6, color=sub["roi"],
+                    colorscale=[[0, "#3a2510"], [0.5, KM_GOLD_DARK], [1, KM_GOLD]],
+                    cmin=float(risk_df["roi"].min()), cmax=float(risk_df["roi"].max()),
+                    opacity=0.85, line=dict(width=0),
+                ),
+                customdata=np.stack([sub["canal_dom"], sub["ventas"]], axis=-1),
+                hovertemplate=("HHI: %{x:.2f}<br>ΔVentas: €%{y:+.2f}M<br>Riesgo σ: €%{z:.2f}M"
+                               "<br>Canal dom: %{customdata[0]}<br>Ventas: €%{customdata[1]:.1f}M<extra></extra>"),
+            )],
+            traces=[trace_rain_idx], name=str(end),
+        ))
+    fig_rain.frames = frames_rain
+
+    fig_rain.update_layout(
+        title=dict(text="Cada gota = un reparto presupuestario · color = ROI marginal",
+                   font=dict(color=KM_CREAM, size=13), x=0.02),
+        paper_bgcolor="rgba(0,0,0,0)",
+        height=600, margin=dict(l=0, r=0, t=50, b=20),
+        scene=dict(
+            xaxis=dict(title="Concentración (HHI)", color=KM_GRAY,
+                       gridcolor="rgba(200,169,110,0.1)", backgroundcolor="rgba(0,0,0,0)"),
+            yaxis=dict(title="ΔVentas vs baseline (M€/año)", color=KM_GRAY,
+                       gridcolor="rgba(200,169,110,0.1)", backgroundcolor="rgba(0,0,0,0)"),
+            zaxis=dict(title="Riesgo σ bootstrap (M€)", color=KM_GRAY,
+                       gridcolor="rgba(200,169,110,0.1)", backgroundcolor="rgba(0,0,0,0)"),
+            bgcolor="rgba(0,0,0,0)",
+            camera=dict(eye=dict(x=1.8, y=-1.8, z=1.1)),
+        ),
+        updatemenus=[play_button(play_label="▶ Llover", duration=55, x=0.02, y=0.02)],
+        annotations=[play_hint_annotation(text="⚡ Pulsa ▶ Llover para ver caer los escenarios")],
+    )
+    st.plotly_chart(fig_rain, width="stretch")
+
+    # Pareto: máxima ΔVentas por bin de riesgo
+    _q_lo = risk_df["d_ventas"].quantile(0.9)
+    _top = risk_df[risk_df["d_ventas"] >= _q_lo].sort_values("riesgo").iloc[0]
+    st.markdown(caption(
+        f"Eje <b>X</b>: concentración del mix (HHI; 0.25 = equireparto, 1.0 = mono-canal). "
+        f"Eje <b>Y</b>: ΔVentas vs. baseline. Eje <b>Z</b>: desviación estándar de ventas por bootstrap (riesgo del modelo). "
+        f"El óptimo no es el punto más alto en Y — es el que maximiza Y con el menor Z posible. "
+        f"Mejor compromiso detectado: ΔVentas <b style='color:{KM_GOLD}'>€{_top['d_ventas']:+.2f}M</b> "
+        f"con riesgo σ <b>€{_top['riesgo']:.2f}M</b> (HHI {_top['hhi']:.2f}, canal dominante {_top['canal_dom']})."
+    ), unsafe_allow_html=True)
+
     # ── Tornado de sensibilidad ──
     st.markdown('<p class="section-header">Sensibilidad Marginal por Canal · ±10%</p>', unsafe_allow_html=True)
 
@@ -912,6 +1221,132 @@ with tab3:
         "Donde la curva se aplana, el canal ha alcanzado su punto de saturación: "
         "invertir más apenas mueve las ventas. "
         "Donde la pendiente sigue siendo pronunciada, hay recorrido de crecimiento."
+    ), unsafe_allow_html=True)
+
+    # ── Superficie 3D de respuesta: colina de ventas sobre los 2 canales top ──
+    st.markdown(animated_header("Colina de Respuesta · Ventas vs. dos canales top",
+                                label="▶ INTERACTIVO · pulsa Ascenso"), unsafe_allow_html=True)
+
+    top2 = sorted(contrib_total_grupo, key=lambda g: contrib_total_grupo[g], reverse=True)[:2]
+    grp_a, grp_b = top2[0], top2[1]
+    col_a, col_b = f"inv_{grp_a}", f"inv_{grp_b}"
+    lab_a, lab_b = GROUP_LABELS[grp_a], GROUP_LABELS[grp_b]
+    hist_a, hist_b = inv_hist_media[col_a], inv_hist_media[col_b]
+
+    @st.cache_data
+    def _compute_response_surface(grp_a, grp_b, n_grid=18):
+        col_a = f"inv_{grp_a}"
+        col_b = f"inv_{grp_b}"
+        xs_ = np.linspace(0, 3 * inv_hist_media[col_a], n_grid)
+        ys_ = np.linspace(0, 3 * inv_hist_media[col_b], n_grid)
+        Z_ = np.zeros((n_grid, n_grid))
+        for i_, xv in enumerate(xs_):
+            for j_, yv in enumerate(ys_):
+                inv = {g: inv_hist_media[g] for g in inv_group_cols}
+                inv[col_a] = xv
+                inv[col_b] = yv
+                Z_[j_, i_] = simular(inv)["ventas_anual_eur"] / 1e6
+        return xs_, ys_, Z_
+
+    xs_s, ys_s, Z_s = _compute_response_surface(grp_a, grp_b)
+
+    i_base = int(np.argmin(np.abs(xs_s - hist_a)))
+    j_base = int(np.argmin(np.abs(ys_s - hist_b)))
+    j_opt, i_opt = np.unravel_index(int(np.argmax(Z_s)), Z_s.shape)
+
+    # Gradient ascent discreto (8-vecinos) sobre el grid pre-computado
+    path_i, path_j = [i_base], [j_base]
+    ci, cj = i_base, j_base
+    for _ in range(80):
+        best_ij, best_z = (ci, cj), Z_s[cj, ci]
+        for di in (-1, 0, 1):
+            for dj in (-1, 0, 1):
+                if di == 0 and dj == 0: continue
+                ni, nj = ci + di, cj + dj
+                if 0 <= ni < len(xs_s) and 0 <= nj < len(ys_s) and Z_s[nj, ni] > best_z:
+                    best_ij, best_z = (ni, nj), Z_s[nj, ni]
+        if best_ij == (ci, cj): break
+        ci, cj = best_ij
+        path_i.append(ci); path_j.append(cj)
+
+    path_x = np.array([xs_s[i] for i in path_i]) / 1e3
+    path_y = np.array([ys_s[j] for j in path_j]) / 1e3
+    path_z = np.array([Z_s[j, i] for i, j in zip(path_i, path_j)])
+
+    fig_surf = go.Figure()
+    fig_surf.add_trace(go.Surface(
+        x=xs_s / 1e3, y=ys_s / 1e3, z=Z_s,
+        colorscale=[[0, "#1a1a1a"], [0.35, KM_GOLD_DARK], [1, KM_GOLD]],
+        opacity=0.92, showscale=False,
+        contours=dict(z=dict(show=True, usecolormap=True, highlightcolor=KM_CREAM, project_z=True)),
+        hovertemplate=(f"{lab_a}: €%{{x:.0f}}k/sem<br>{lab_b}: €%{{y:.0f}}k/sem"
+                       "<br>Ventas: €%{z:.2f}M/año<extra></extra>"),
+    ))
+    fig_surf.add_trace(go.Scatter3d(
+        x=[hist_a/1e3], y=[hist_b/1e3], z=[Z_s[j_base, i_base]],
+        mode="markers+text", text=["baseline"], textposition="top center",
+        textfont=dict(color=KM_GRAY, size=10),
+        marker=dict(size=7, color=KM_GRAY, line=dict(color=KM_CREAM, width=1)),
+        showlegend=False,
+        hovertemplate="<b>Baseline</b><br>€%{z:.2f}M/año<extra></extra>",
+    ))
+    fig_surf.add_trace(go.Scatter3d(
+        x=[xs_s[i_opt]/1e3], y=[ys_s[j_opt]/1e3], z=[Z_s[j_opt, i_opt]],
+        mode="markers+text", text=["óptimo"], textposition="top center",
+        textfont=dict(color=KM_GOLD, size=11),
+        marker=dict(size=10, color=KM_GOLD, symbol="diamond", line=dict(color=KM_CREAM, width=1.5)),
+        showlegend=False,
+        hovertemplate="<b>Óptimo</b><br>€%{z:.2f}M/año<extra></extra>",
+    ))
+    trace_path_idx = 3
+    fig_surf.add_trace(go.Scatter3d(
+        x=[path_x[0]], y=[path_y[0]], z=[path_z[0]],
+        mode="lines+markers",
+        line=dict(color=KM_CREAM, width=6),
+        marker=dict(size=4, color=KM_CREAM),
+        showlegend=False, hoverinfo="skip",
+    ))
+
+    frames_surf = []
+    for k in range(1, len(path_x) + 1):
+        frames_surf.append(go.Frame(
+            data=[go.Scatter3d(
+                x=path_x[:k], y=path_y[:k], z=path_z[:k],
+                mode="lines+markers",
+                line=dict(color=KM_CREAM, width=6),
+                marker=dict(size=4, color=KM_CREAM),
+            )],
+            traces=[trace_path_idx], name=str(k),
+        ))
+    fig_surf.frames = frames_surf
+
+    fig_surf.update_layout(
+        title=dict(text=f"Ventas anuales proyectadas según inversión semanal en {lab_a} y {lab_b}",
+                   font=dict(color=KM_CREAM, size=13), x=0.02),
+        paper_bgcolor="rgba(0,0,0,0)",
+        height=620, margin=dict(l=0, r=0, t=50, b=20),
+        scene=dict(
+            xaxis=dict(title=f"{lab_a} (€k/sem)", color=KM_GRAY,
+                       gridcolor="rgba(200,169,110,0.1)", backgroundcolor="rgba(0,0,0,0)"),
+            yaxis=dict(title=f"{lab_b} (€k/sem)", color=KM_GRAY,
+                       gridcolor="rgba(200,169,110,0.1)", backgroundcolor="rgba(0,0,0,0)"),
+            zaxis=dict(title="Ventas (M€/año)", color=KM_GRAY,
+                       gridcolor="rgba(200,169,110,0.1)", backgroundcolor="rgba(0,0,0,0)"),
+            bgcolor="rgba(0,0,0,0)",
+            camera=dict(eye=dict(x=1.7, y=-1.7, z=1.0)),
+        ),
+        updatemenus=[play_button(play_label="▶ Ascenso", duration=140, x=0.02, y=0.02)],
+        annotations=[play_hint_annotation(text="⚡ Pulsa ▶ Ascenso para escalar la colina")],
+    )
+    st.plotly_chart(fig_surf, width="stretch")
+
+    lift_opt_pct = (Z_s[j_opt, i_opt] - Z_s[j_base, i_base]) / Z_s[j_base, i_base] * 100
+    st.markdown(caption(
+        f"Fijando el resto de canales en su media histórica, la colina muestra las ventas anuales para cada "
+        f"combinación de inversión en <b style='color:{KM_GOLD}'>{lab_a}</b> y <b style='color:{KM_GOLD}'>{lab_b}</b>. "
+        f"Donde la superficie se aplana → saturación conjunta. "
+        f"Pulsa <b>▶ Ascenso</b> para ver la ruta de gradient ascent desde el baseline al óptimo "
+        f"(<b>+{lift_opt_pct:.1f}%</b> vs. mix histórico)."
     ), unsafe_allow_html=True)
 
     # ── Escenarios predefinidos ──
@@ -1293,6 +1728,110 @@ with tab4:
                      xaxis_title="Semanas de inversión",
                      yaxis_title="Adstock acumulado", height=340, showlegend=False)
         st.plotly_chart(fig_acc, width="stretch")
+
+    # ── Osciloscopio de adstock: pulso + estela ──
+    st.markdown(animated_header("Osciloscopio · El Eco de Cada Campaña",
+                                label="▶ INTERACTIVO · pulsa Sweep"), unsafe_allow_html=True)
+
+    N_OSC = 36
+    pulses = [(3, 1.0), (11, 0.7), (19, 1.3), (27, 0.5)]
+    raw_in = np.zeros(N_OSC)
+    for idx, mag in pulses:
+        if idx < N_OSC:
+            raw_in[idx] = mag
+    # Aplica adstock con los alpha/lag actuales
+    lagged = np.zeros(N_OSC)
+    if lag_sim < N_OSC:
+        lagged[lag_sim:] = raw_in[:N_OSC - lag_sim]
+    adst = np.zeros(N_OSC)
+    for t in range(N_OSC):
+        adst[t] = lagged[t] + (alpha_sim * adst[t-1] if t > 0 else 0.0)
+
+    fig_osc = make_subplots(
+        rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.06,
+        subplot_titles=("Impulso de inversión (raw)", "Memoria adstock · eco acumulado"),
+    )
+    # Línea CRT (sweep) — se moverá con los frames
+    fig_osc.add_trace(go.Scatter(
+        x=[0, 0], y=[0, max(1.0, raw_in.max() * 1.15)],
+        mode="lines", line=dict(color="rgba(200,169,110,0.35)", width=1, dash="dot"),
+        hoverinfo="skip", showlegend=False,
+    ), row=1, col=1)
+    sweep_top_idx = 0
+
+    # Raw (barras stem) — visible hasta la semana actual
+    fig_osc.add_trace(go.Bar(
+        x=list(range(1)), y=[raw_in[0]], marker_color=KM_CREAM,
+        marker_line=dict(color=KM_CREAM, width=2), width=0.35,
+        hovertemplate="Semana %{x}: impulso %{y:.2f}<extra></extra>",
+        showlegend=False,
+    ), row=1, col=1)
+    raw_bar_idx = 1
+
+    # Sweep inferior
+    fig_osc.add_trace(go.Scatter(
+        x=[0, 0], y=[0, max(1.0, adst.max() * 1.15)],
+        mode="lines", line=dict(color="rgba(200,169,110,0.35)", width=1, dash="dot"),
+        hoverinfo="skip", showlegend=False,
+    ), row=2, col=1)
+    sweep_bot_idx = 2
+
+    # Adstock (estela) — la onda va creciendo semana a semana
+    fig_osc.add_trace(go.Scatter(
+        x=[0], y=[adst[0]], mode="lines",
+        line=dict(color=KM_GOLD, width=2.6, shape="spline"),
+        fill="tozeroy", fillcolor="rgba(200,169,110,0.18)",
+        hovertemplate="Semana %{x}: adstock %{y:.2f}<extra></extra>",
+        showlegend=False,
+    ), row=2, col=1)
+    adst_line_idx = 3
+
+    frames_osc = []
+    for t in range(1, N_OSC + 1):
+        frames_osc.append(go.Frame(
+            data=[
+                go.Scatter(x=[t-1, t-1], y=[0, max(1.0, raw_in.max() * 1.15)],
+                           mode="lines", line=dict(color=KM_CREAM, width=1.4, dash="dot")),
+                go.Bar(x=list(range(t)), y=raw_in[:t], marker_color=KM_CREAM,
+                       marker_line=dict(color=KM_CREAM, width=2), width=0.35),
+                go.Scatter(x=[t-1, t-1], y=[0, max(1.0, adst.max() * 1.15)],
+                           mode="lines", line=dict(color=KM_CREAM, width=1.4, dash="dot")),
+                go.Scatter(x=list(range(t)), y=adst[:t], mode="lines",
+                           line=dict(color=KM_GOLD, width=2.6, shape="spline"),
+                           fill="tozeroy", fillcolor="rgba(200,169,110,0.18)"),
+            ],
+            traces=[sweep_top_idx, raw_bar_idx, sweep_bot_idx, adst_line_idx],
+            name=str(t),
+        ))
+    fig_osc.frames = frames_osc
+
+    apply_layout(fig_osc,
+                 height=520, showlegend=False,
+                 margin=dict(l=60, r=30, t=90, b=50),
+                 title=dict(text="Cada barra = campaña semanal. La onda dorada = memoria residual acumulada.",
+                            y=0.98, yanchor="top"))
+    for ann in fig_osc.layout.annotations:
+        ann.font = dict(color=KM_CREAM, size=11)
+        ann.y = ann.y - 0.02 if ann.y is not None else ann.y
+    fig_osc.update_xaxes(title_text="Semana", row=2, col=1, range=[-0.5, N_OSC - 0.5])
+    fig_osc.update_xaxes(range=[-0.5, N_OSC - 0.5], row=1, col=1)
+    fig_osc.update_yaxes(title_text="Impulso", row=1, col=1, range=[0, max(1.0, raw_in.max() * 1.15)])
+    fig_osc.update_yaxes(title_text="Adstock", row=2, col=1, range=[0, max(1.0, adst.max() * 1.15)])
+    fig_osc.update_layout(updatemenus=[play_button(
+        play_label="▶ Sweep", duration=90,
+        x=1.0, y=1.08, xanchor="right", yanchor="bottom",
+    )])
+    fig_osc.add_annotation(**play_hint_annotation(
+        text="⚡ Pulsa ▶ Sweep para ver el barrido",
+        x=0.02, y=1.08, xref="paper", yref="paper", xanchor="left", yanchor="bottom",
+    ))
+    st.plotly_chart(fig_osc, width="stretch")
+    st.markdown(caption(
+        f"Cuatro impulsos de inversión en semanas <b>{', '.join(str(p[0]) for p in pulses)}</b>. "
+        f"Con α = <b>{alpha_sim:.2f}</b> y lag = <b>{lag_sim}</b>, cada impulso deja una <b>estela dorada</b> "
+        f"que decae exponencialmente y se <b>superpone</b> con el siguiente — por eso las campañas encadenadas "
+        f"construyen memoria de marca. Pulsa <b>▶ Sweep</b> para recorrer la línea temporal."
+    ), unsafe_allow_html=True)
 
     # Comparativa real: inversión raw vs logadstock (inspirado en notebook 2)
     st.markdown('<p class="section-header">Transformación real · Raw vs Logadstock</p>', unsafe_allow_html=True)
