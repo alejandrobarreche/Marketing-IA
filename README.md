@@ -1,6 +1,6 @@
 # Marketing Mix Model — K-Moda
 
-[![CI](https://github.com/alejandrobarreche/Marketing-IA/actions/workflows/ci.yml/badge.svg)](https://github.com/alejandrobarreche/Marketing-IA/actions/workflows/ci.yml)
+[![CI](https://github.com/alejandrobarreche/marketing-mix-model/actions/workflows/ci.yml/badge.svg)](https://github.com/alejandrobarreche/marketing-mix-model/actions/workflows/ci.yml)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.3%2B-F7931E)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-FF4B4B)
