@@ -8,7 +8,6 @@ import pandas as pd
 import numpy as np
 import pickle
 import plotly.graph_objects as go
-import plotly.express as px
 from plotly.subplots import make_subplots
 from pathlib import Path
 
@@ -623,9 +622,9 @@ with tab1:
     )
     st.plotly_chart(fig_cyl, width="stretch")
     st.markdown(caption(
-        f"Cada vuelta del cilindro es un año (Ene→Dic). La altura es tiempo cronológico, "
-        f"y el radio se despega de la base proporcionalmente a las ventas semanales. "
-        f"Pulsa <b>Play</b> para ver cómo se traza la hélice semana a semana."
+        "Cada vuelta del cilindro es un año (Ene→Dic). La altura es tiempo cronológico, "
+        "y el radio se despega de la base proporcionalmente a las ventas semanales. "
+        "Pulsa <b>Play</b> para ver cómo se traza la hélice semana a semana."
     ), unsafe_allow_html=True)
 
     # ── Mini tarjetas por canal ──
@@ -1032,7 +1031,7 @@ with tab3:
         textfont=dict(color=KM_CREAM, size=11),
         marker=dict(size=9, color=KM_CREAM, symbol="diamond", line=dict(color=KM_GOLD, width=1.5)),
         showlegend=False,
-        hovertemplate=f"<b>Baseline</b><br>HHI: %{{x:.2f}}<br>ΔVentas: 0<br>Riesgo σ: €%{{z:.2f}}M<extra></extra>",
+        hovertemplate="<b>Baseline</b><br>HHI: %{x:.2f}<br>ΔVentas: 0<br>Riesgo σ: €%{z:.2f}M<extra></extra>",
     ))
     # Traza-lluvia (se irá revelando en frames). Empieza con un punto invisible.
     trace_rain_idx = 1
@@ -1848,13 +1847,13 @@ with tab4:
     fig_cmp.add_trace(go.Scatter(
         x=dp["semana_inicio"], y=dp[inv_col] / 1e3,
         mode="lines", line=dict(color=GROUP_COLORS[sel_key], width=1.6),
-        fill="tozeroy", fillcolor=f"rgba(200,169,110,0.10)",
+        fill="tozeroy", fillcolor="rgba(200,169,110,0.10)",
         hovertemplate="€%{y:.0f}k/sem<extra></extra>", name="raw",
     ), row=1, col=1)
     fig_cmp.add_trace(go.Scatter(
         x=dp["semana_inicio"], y=dp[log_col],
         mode="lines", line=dict(color=KM_GOLD, width=1.6),
-        fill="tozeroy", fillcolor=f"rgba(200,169,110,0.14)",
+        fill="tozeroy", fillcolor="rgba(200,169,110,0.14)",
         hovertemplate="%{y:.2f}<extra></extra>", name="logadstock",
     ), row=2, col=1)
     apply_layout(fig_cmp, title="", height=420, showlegend=False)

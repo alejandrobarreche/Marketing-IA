@@ -1,4 +1,27 @@
-.idea
-.DS_Store
+# Raw course data (not redistributable)
 data/lake/
+
+# Python
 __pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# LaTeX build artefacts
+report/*.aux
+report/*.log
+report/*.out
+report/*.toc
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
